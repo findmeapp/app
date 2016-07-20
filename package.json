@@ -1,0 +1,18 @@
+{
+  "name": "FindMe",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node node_modules/react-native/local-cli/cli.js start",
+    "menu": "adb shell input keyevent 82",
+    "android": "adb reverse tcp:8081 tcp:8081 &> /dev/null && react-native run-android"
+  },
+  "dependencies": {
+    "react": "15.2.0",
+    "react-native": "0.29.0",
+    "react-native-button": "^1.6.0",
+    "react-native-gmaps": "^1.0.9",
+    "react-native-maps": "^0.7.0",
+    "react-native-vector-icons": "^2.0.3"
+  }
+}
