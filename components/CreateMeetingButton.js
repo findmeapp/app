@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import Button from 'react-native-button';
+//import Button from 'react-native-button';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-export default class Button extends Component {
+export default class btn extends Component {
   constructor(props, context) {
     super(props, context);
   }
