@@ -2,7 +2,7 @@ package com.findme;
 
 import com.facebook.react.ReactActivity;
 import com.oblador.vectoricons.VectorIconsPackage;
-import com.rota.rngmaps.RNGMapsPackage;
+//import com.rota.rngmaps.RNGMapsPackage;
 import com.facebook.react.ReactPackage;
 import com.airbnb.android.react.maps.MapsPackage;
 import com.facebook.react.shell.MainReactPackage;
@@ -17,8 +17,8 @@ public class MainActivity extends ReactActivity {
         return Arrays.<ReactPackage>asList(
             new MainReactPackage(),
             new VectorIconsPackage(),
-            new RNGMapsPackage(),
-            new MapsPackage(this)
+            //new RNGMapsPackage(),
+            new MapsPackage()
         );
     }
 
