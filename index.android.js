@@ -42,7 +42,39 @@ const styles = StyleSheet.create({
   }
 });
 class FindMe extends Component {
+  constructor(){
+    super();
+
+    this.state = {
+      pos: {
+        latitude: 37.78825,
+        longitude: -122.4324
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        let initialPosition = JSON.stringify(position);
+        this.setState({initialPosition});
+      },
+      (error) => alert(JSON.stringify(error)),
+      {enableHighAccuracy: true, timeout: 20000, maximumAge: 1000}
+    );
+    this.watchID = navigator.geolocation.watchPosition(
+      (position) => {
+        let lastPosition = JSON.stringify(position);
+        console.log(lastPosition);
+        this.setState({pos:lastPosition});
+      }
+    );
+
+  }
+
+  componentWillUnmount(){
+     navigator.geolocation.clearWatch(this.watchID);
+  }
   render() {
+    console.log(this.state);
     return (
       <View style ={styles.container}>
                 <MapView
@@ -54,6 +86,7 @@ class FindMe extends Component {
                         longitudeDelta: 0.0121,
                     }}
                     >
+                    <MapView.Marker title="You are here" coordinate={this.state.pos} />
                 </MapView>
                 <CreateMeetingButton styles={styles.btn} />
             </View>
