@@ -90,10 +90,9 @@ export default class Map extends Component {
                     style={styles.map}
                     region={this.state.region}
                     onRegionChange={this.onRegionChange}
-                    showsUserLocation
+
                     >
-                    <MapView.Marker title="You are here" coordinate={{longitude:this.state.region.longitude,latitude:this.state.region.latitude}} />
-                    <MapView.Marker title="You are here" coordinate={this.state.position.coords} />
+                    <MapView.Marker flat={false} title="You are here" coordinate={this.state.position.coords} />
                 </MapView>
 
           </View>
