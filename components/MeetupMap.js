@@ -1,10 +1,10 @@
-import React, { Component } from 'react';
+import React, { Component } from 'react'
 import {
   StyleSheet,
   Text,
   View
-} from 'react-native';
-import update from "react-addons-update";
+} from 'react-native'
+import update from "react-addons-update"
 
 import MapView from 'react-native-maps'
 
@@ -28,11 +28,11 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
 
-});
+})
 
 export default class Map extends Component {
   constructor(props, context) {
-    super(props, context);
+    super(props, context)
     this.state = {
       region: {
         latitude: (props.initialPosition||37.78825),
@@ -40,62 +40,84 @@ export default class Map extends Component {
         latitudeDelta: 0.015,
         longitudeDelta: 0.0121,
       },
-      position:{
+      position:null,
+      marker:null
+      /*position:{
         coords:{
           latitude: (props.initialPosition||37.78825),
           longitude: (props.initialPosition||-122.4324),
         }
-      }
-    };
+      },
+      marker:{
+        coords:{
+          latitude:null,
+          longitude:null
+        }
+      }*/
+    }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        this._updateCoords(position);
+        this._updateCoords(position)
     },
       (error) => alert(JSON.stringify(error)),
-      {enableHighAccuracy: true, timeout: 1000, maximumAge: 1000}
-    );
+      {enableHighAccuracy: true, timeout: 10000, maximumAge: 2000}
+    )
     this.watchID = navigator.geolocation.watchPosition(
       (position) => {
-        let lastPosition = JSON.stringify(position);
-        console.log(lastPosition);
-        this._updateCoords(position);
+        this._updateCoords(position)
       }
-    );
-    this.onRegionChange = this.onRegionChange.bind(this);
+    )
+    this.onRegionChangeComplete = this.onRegionChangeComplete.bind(this)
+    this._setWantedLocation = this._setWantedLocation.bind(this)
+    this._updateCoords = this._updateCoords.bind(this)
+
   }
   _updateCoords(pos){
     this.setState((previousState)=>update(previousState,{
-      region:{
-        latitude:{$set:pos.coords.latitude},
-        longitude:{$set:pos.coords.longitude}
-      },
-      position:{$set:pos}
+      position:{$set:pos.coords}
       })
-    );
+    )
   }
-  onRegionChange(e) {
-    console.log(e);
-    this.setState({ region:e });
+  _setWantedLocation(e){
+    console.log("tapped on map")
+    const press = e.nativeEvent ? e.nativeEvent : e
+    console.log(press)
+    this.setState((previousState)=>update(previousState,{
+      marker:{$set:press.coordinate}
+      })
+    )
+  }
+  onRegionChangeComplete(e) {
+    this.setState((previousState)=>update(previousState,{
+      region:{$set:e}
+      })
+    )
   }
   componentWillUnmount(){
-     navigator.geolocation.clearWatch(this.watchID);
+     navigator.geolocation.clearWatch(this.watchID)
   }
   render() {
-    //console.log(this.state);
+    console.log(this.state)
+
+    let markers = (
+      this.state.position !== null? <MapView.Marker flat={false} title="You are here" coordinate={this.state.position} />:null,
+      this.state.marker !== null? <MapView.Marker flat={false} title="You want to go here" coordinate={this.state.marker} />:null
+    )
     return (
       <View style ={styles.container}>
                 <MapView
-                    ref="map"
+                    ref={(ref)=>this.map = ref}
                     style={styles.map}
                     region={this.state.region}
-                    onRegionChange={this.onRegionChange}
-
+                    onRegionChangeComplete={this.onRegionChangeComplete}
+                    loadingEnabled={true}
+                    onPress={this._setWantedLocation}
                     >
-                    <MapView.Marker flat={false} title="You are here" coordinate={this.state.position.coords} />
+                    {markers}
                 </MapView>
 
           </View>
-    );
+    )
   }
 }
