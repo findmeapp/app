@@ -12,19 +12,13 @@ import {
   View,
   TextInput
 } from 'react-native';
+import App from './components/App'
 import MapView from 'react-native-maps'
-import CreateMeetingButton from './components/CreateMeetingButton'
-import MeetupMap from './components/MeetupMap'
-//import RNGMap from 'react-native-gmaps';
 
 class FindMe extends Component {
   render(){
     return(
-      <View>
-        <MeetupMap />
-        <CreateMeetingButton />
-      </View>
-
+      <App />
     )
   }
 }
