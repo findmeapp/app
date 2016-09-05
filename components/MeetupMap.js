@@ -81,6 +81,7 @@ export default class Map extends Component {
     // test distance with each corner with some margin
     // update if distance exceeds longitudeDelta and / or latitudeDelta
     // http://stackoverflow.com/questions/36685372/how-to-zoom-in-out-in-react-native-map
+    // comparing longitude and latitudes http://stackoverflow.com/questions/15965166/what-is-the-maximum-length-of-latitude-and-longitude
 
     console.log(JSON.stringify(this.state.region));
     console.log(JSON.stringify(pos));
