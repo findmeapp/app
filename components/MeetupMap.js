@@ -10,7 +10,7 @@ import haversine from 'haversine'
 import MapView from 'react-native-maps'
 import CreateMeetingButton from './map/CreateMeetingButton'
 import pick from 'lodash/pick'
-
+import BackgroundGeolocation from 'react-native-mauron85-background-geolocation';
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -32,7 +32,13 @@ const styles = StyleSheet.create({
   },
 
 })
-
+/* TODO:
+ - function binding in constructor
+ - handle background location tracker
+ - add on press CreateMeetingBUtton
+          - destruct forground geolocation tracker
+          - enable background location tracker
+*/
 export default class Map extends Component {
   constructor(props, context) {
     super(props, context)
@@ -41,13 +47,16 @@ export default class Map extends Component {
       gotGps:false,
       region: null,
       position:null,
-      marker:null
+      marker:null,
+      locaiton_history: [],
+      isTracking:false,
+      isSelectingMeetup:true,
+      selectedMeetupDestination:false
     }
 
     /* Function binding (todo: redo all methods below to es6.... es6 autobinds)*/
     this.onRegionChangeComplete = this.onRegionChangeComplete.bind(this)
     this._setWantedLocation = this._setWantedLocation.bind(this)
-    //this._updateCurrentPosition = this._updateCurrentPosition.bind(this)
   }
   /**
   * Destructor
@@ -55,6 +64,85 @@ export default class Map extends Component {
   componentWillUnmount(){
      navigator.geolocation.clearWatch(this.watchID)
   }
+  componentWillMount = () => {
+    //start foreground tracking
+    this.initTracking()
+    //configure background tracking
+    logError (msg) => {
+      console.log(`[ERROR] getLocations: ${msg}`);
+    }
+    BackgroundGeolocation.getLocations(this._handleLocationHistoric, logError);
+    BackgroundGeolocation.configure({
+      desiredAccuracy: 10,
+      stationaryRadius: 50,
+      distanceFilter: 50,
+      debug: true,
+      locationProvider: BackgroundGeolocation.provider.ANDROID_DISTANCE_FILTER_PROVIDER,
+      interval: 30000,
+      fastestInterval: 5000,
+      stopOnStillActivity: false,
+      stopOnTerminate: false,
+      url: 'http://localhost:8080/locations',
+      syncThreshold: 50,
+      maxLocations: 200,
+      httpHeaders: {
+        'X-FOO': 'bar'
+      }
+    });
+    BackgroundGeolocation.on('location',this._handleLocationUpdates)
+  }
+  _handleLocationHistoric = (locations) => {
+
+  }
+  _handleLocationUpdates = (pos) => {
+
+  }
+  toggleTracking = () => {
+    if (this.state.isTracking) {
+      this.stopTracking();
+    } else {
+      this.startTracking();
+    }
+  }
+
+  startTracking() {
+    if (this.state.isTracking) { return; }
+
+    BackgroundGeolocation.isLocationEnabled((enabled) => {
+      if (enabled) {
+        BackgroundGeolocation.start(
+          () => {
+            // service started successfully
+            // you should adjust your app UI for example change switch element to indicate
+            // that service is running
+            console.log('[DEBUG] BackgroundGeolocation started successfully');
+            this.setState({ isTracking: true });
+          },
+          (error) => {
+            // Tracking has not started because of error
+            // you should adjust your app UI for example change switch element to indicate
+            // that service is not running
+            if (error.code === 2) {
+              BackgroundGeolocation.showAppSettings();
+            } else {
+              console.log('[ERROR] Start failed: ' + error.message);
+            }
+            this.setState({ isTracking: false });
+          }
+        );
+      } else {
+        // Location services are disabled
+        BackgroundGeolocation.showLocationSettings();
+      }
+    });
+  }
+
+  stopTracking() {
+    if (!this.state.isTracking) { return; }
+
+    BackgroundGeolocation.stop();
+    this.setState({ isTracking: false });
+}
   /**
   * Puts the current position in state
   * and checks whether the map region
@@ -72,8 +160,8 @@ export default class Map extends Component {
       Object.assign(updatable,{region:{$set:{
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
       }}})
     /*
     //to update the region:
@@ -130,6 +218,11 @@ export default class Map extends Component {
    );
   }
   initTracking = () => {
+    /*
+     * Todo refactor using https://www.npmjs.com/package/react-native-mauron85-background-geolocation
+     * it runs in background and updates a certain website
+     */
+     */
     navigator.geolocation.getCurrentPosition(
       (position) => {
         this._updateCurrentPosition(position)
@@ -147,8 +240,9 @@ export default class Map extends Component {
   renderMap = () => {
     let markers = (
       //this.state.gotGps ? <MapView.Marker title="You are here" coordinate={this.posToLatlng(this.state.position)} />:null,
-      this.state.marker !== null? <MapView.Marker title="You want to go here" coordinate={this.state.marker} />:null
+      this.state.selectedMeetupDestination ? <MapView.Marker title="You want to go here" coordinate={this.state.marker} />:null
     )
+
     return (
       <View style ={styles.container}>
         <MapView
@@ -167,12 +261,13 @@ export default class Map extends Component {
           {JSON.stringify(this.state.position)}
         </Text>
         { this.state.marker !== null ? <CreateMeetingButton location={this.state.marker} /> : null }
+
       </View>
     )
   }
   render() {
     if(this.state.gotGps == false){
-      this.initTracking()
+
       return this.renderLoading()
     }
     else{
