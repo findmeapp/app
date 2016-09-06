@@ -4,7 +4,7 @@ import {
   Text,
   View
 } from 'react-native'
-import ProgressBarAndroid from 'ProgressBarAndroid'
+import ProgressBar from 'ProgressBarAndroid'
 import update from "react-addons-update"
 import haversine from 'haversine'
 import MapView from 'react-native-maps'
@@ -30,9 +30,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-
+  centering: { alignItems: 'center', justifyContent: 'center', padding: 8, }
 })
 /* TODO:
+ - update region of map if gps latlng are 20% of zoomLevel away from the 4 corners of the region the map is on
  - function binding in constructor
  - handle background location tracker
  - add on press CreateMeetingBUtton
@@ -57,6 +58,13 @@ export default class Map extends Component {
     /* Function binding (todo: redo all methods below to es6.... es6 autobinds)*/
     this.onRegionChangeComplete = this.onRegionChangeComplete.bind(this)
     this._setWantedLocation = this._setWantedLocation.bind(this)
+
+  }
+  _handleLocationHistoric(locations) {
+    console.log(locations);
+  }
+  _handleLocationUpdates(pos) {
+
   }
   /**
   * Destructor
@@ -66,12 +74,13 @@ export default class Map extends Component {
   }
   componentWillMount = () => {
     //start foreground tracking
-    this.initTracking()
+    this._initForgroundTracking()
     //configure background tracking
-    logError (msg) => {
+    function logError(msg) {
       console.log(`[ERROR] getLocations: ${msg}`);
     }
-    BackgroundGeolocation.getLocations(this._handleLocationHistoric, logError);
+    console.log(typeof(this._handleLocationHistoric));
+    BackgroundGeolocation.getLocations(this._handleLocationHistoric.bind(this), logError);
     BackgroundGeolocation.configure({
       desiredAccuracy: 10,
       stationaryRadius: 50,
@@ -89,23 +98,17 @@ export default class Map extends Component {
         'X-FOO': 'bar'
       }
     });
-    BackgroundGeolocation.on('location',this._handleLocationUpdates)
+    BackgroundGeolocation.on('location',this._handleLocationUpdates.bind(this))
   }
-  _handleLocationHistoric = (locations) => {
 
-  }
-  _handleLocationUpdates = (pos) => {
-
-  }
   toggleTracking = () => {
     if (this.state.isTracking) {
-      this.stopTracking();
+      this.stopBackgroundTracking();
     } else {
-      this.startTracking();
+      this.startBackgroundTracking();
     }
   }
-
-  startTracking() {
+  startBackgroundTracking = () => {
     if (this.state.isTracking) { return; }
 
     BackgroundGeolocation.isLocationEnabled((enabled) => {
@@ -137,7 +140,7 @@ export default class Map extends Component {
     });
   }
 
-  stopTracking() {
+  stopBackgroundTracking = () => {
     if (!this.state.isTracking) { return; }
 
     BackgroundGeolocation.stop();
@@ -150,44 +153,28 @@ export default class Map extends Component {
   * or the user diactivated and reactivated
   * in another location
   */
-  _updateCurrentPosition = (pos) =>{
+  _updateForgroundCurrentPosition = (pos) =>{
 
     let updatable = {
       gotGps:{$set:true},
       position:{$set:pos}
     }
-    if(!this.state.gotGps)//if it's the first time we have the gps we must update the map region
+    if(!this.state.gotGps)
+    //it's the first time we have the gps we must update the map region
       Object.assign(updatable,{region:{$set:{
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
       }}})
-    /*
-    //to update the region:
+
+    //TODO: update the region:
     // get all corners of the maps
     // test distance with each corner with some margin
     // update if distance exceeds longitudeDelta and / or latitudeDelta
     // http://stackoverflow.com/questions/36685372/how-to-zoom-in-out-in-react-native-map
     // comparing longitude and latitudes http://stackoverflow.com/questions/15965166/what-is-the-maximum-length-of-latitude-and-longitude
 
-    console.log(JSON.stringify(this.state.region));
-    console.log(JSON.stringify(pos));
-    let pos1 = pick(this.state.region,["longitude","latitude"])
-    let currentLatLng = pick(pos.coords,["longitude","latitude"])
-
-
-    let d = haversine(pos1,currentLatLng,{unit:"km"}) || 0
-    console.log(d);
-    //if distance is greater than 5km we readjust the region
-    if(d>10){
-        Object.assign(updatable,{
-        region:{
-          longitude:{$set:currentLatLng.longitude},
-          latitude:{$set:currentLatLng.latitude}
-        }
-      })
-    }*/
     this.setState((previousState)=>update(previousState,updatable))
   }
   _setWantedLocation(e){
@@ -207,25 +194,19 @@ export default class Map extends Component {
   posToLatlng = (pos) =>{
     return pick(pos.coords,["longitude","latitude"])
   }
-  renderLoading = () => {
-    return (
-     <View style={styles.container}>
-       <ProgressBarAndroid />
-       <Text style={styles.instructions}>
-         Receiving GPS information...
-       </Text>
-     </View>
-   );
-  }
-  initTracking = () => {
+
+  /**
+   * Start foreground tracking
+   */
+  _initForgroundTracking = () => {
     /*
      * Todo refactor using https://www.npmjs.com/package/react-native-mauron85-background-geolocation
      * it runs in background and updates a certain website
      */
-     */
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        this._updateCurrentPosition(position)
+        this._updateForgroundCurrentPosition(position)
 
     },
       (error) => alert(JSON.stringify(error)),
@@ -233,9 +214,21 @@ export default class Map extends Component {
     )
     this.watchID = navigator.geolocation.watchPosition(
       (position) => {
-        this._updateCurrentPosition(position)
+        this._updateForgroundCurrentPosition(position)
       }
     )
+  }
+  /** Render functions **/
+  renderLoading = () => {
+    return (
+     <View style={styles.container}>
+       <ProgressBar />
+       <Text style={styles.instructions}>
+         Receiving GPS information...
+       </Text>
+
+     </View>
+   );
   }
   renderMap = () => {
     let markers = (
@@ -265,9 +258,11 @@ export default class Map extends Component {
       </View>
     )
   }
+  /**
+   * Render the map component
+   */
   render() {
     if(this.state.gotGps == false){
-
       return this.renderLoading()
     }
     else{

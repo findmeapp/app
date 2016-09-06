@@ -8,6 +8,7 @@
     "android": "adb reverse tcp:8081 tcp:8081 &> /dev/null && react-native run-android"
   },
   "dependencies": {
+    "haversine": "^1.0.0",
     "lodash": "^4.15.0",
     "react": "15.2.0",
     "react-addons-update": "^15.3.1",
