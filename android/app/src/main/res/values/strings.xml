@@ -1,6 +1,5 @@
 <resources>
-
-
-
+    <string name="account_type">com.findme.account</string>
+    <string name="content_authority">com.findme.authority</string>
     <string name="app_name">FindMe</string>
 </resources>

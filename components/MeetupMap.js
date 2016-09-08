@@ -49,7 +49,7 @@ export default class Map extends Component {
       region: null,
       position:null,
       marker:null,
-      locaiton_history: [],
+      locations: [],
       isTracking:false,
       isSelectingMeetup:true,
       selectedMeetupDestination:false
@@ -60,47 +60,37 @@ export default class Map extends Component {
     this._setWantedLocation = this._setWantedLocation.bind(this)
 
   }
-  _handleLocationHistoric(locations) {
-    console.log(locations);
-  }
-  _handleLocationUpdates(pos) {
-
-  }
   /**
-  * Destructor
+  * Puts the current position in state
+  * and checks whether the map region
+  * should be updated : (location is faulty
+  * or the user diactivated and reactivated
+  * in another location
   */
-  componentWillUnmount(){
-     navigator.geolocation.clearWatch(this.watchID)
-  }
-  componentWillMount = () => {
-    //start foreground tracking
-    this._initForgroundTracking()
-    //configure background tracking
-    function logError(msg) {
-      console.log(`[ERROR] getLocations: ${msg}`);
+  _handleLocationUpdates(pos) {
+    let updatable = {
+      gotGps:{$set:true},
+      position:{$set:pos}
     }
-    console.log(typeof(this._handleLocationHistoric));
-    BackgroundGeolocation.getLocations(this._handleLocationHistoric.bind(this), logError);
-    BackgroundGeolocation.configure({
-      desiredAccuracy: 10,
-      stationaryRadius: 50,
-      distanceFilter: 50,
-      debug: true,
-      locationProvider: BackgroundGeolocation.provider.ANDROID_DISTANCE_FILTER_PROVIDER,
-      interval: 30000,
-      fastestInterval: 5000,
-      stopOnStillActivity: false,
-      stopOnTerminate: false,
-      url: 'http://localhost:8080/locations',
-      syncThreshold: 50,
-      maxLocations: 200,
-      httpHeaders: {
-        'X-FOO': 'bar'
-      }
-    });
-    BackgroundGeolocation.on('location',this._handleLocationUpdates.bind(this))
-  }
+    if(!this.state.gotGps)
+    //it's the first time we have the gps we must update the map region
+      Object.assign(updatable,{region:{$set:{
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }}})
 
+    //TODO: update the region:
+    // get all corners of the maps
+    // test distance with each corner with some margin
+    // update if distance exceeds longitudeDelta and / or latitudeDelta
+    // http://stackoverflow.com/questions/36685372/how-to-zoom-in-out-in-react-native-map
+    // comparing longitude and latitudes http://stackoverflow.com/questions/15965166/what-is-the-maximum-length-of-latitude-and-longitude
+
+    this.setState((previousState)=>update(previousState,updatable))
+
+  }
   toggleTracking = () => {
     if (this.state.isTracking) {
       this.stopBackgroundTracking();
@@ -119,7 +109,7 @@ export default class Map extends Component {
             // you should adjust your app UI for example change switch element to indicate
             // that service is running
             console.log('[DEBUG] BackgroundGeolocation started successfully');
-            this.setState({ isTracking: true });
+            this.setState({ isTracking: true, gotGps:true });
           },
           (error) => {
             // Tracking has not started because of error
@@ -145,7 +135,65 @@ export default class Map extends Component {
 
     BackgroundGeolocation.stop();
     this.setState({ isTracking: false });
-}
+  }
+  /**
+  * Destructor
+  */
+  componentWillUnmount(){
+     navigator.geolocation.clearWatch(this.watchID)
+  }
+  componentWillMount = () => {
+    //start foreground tracking
+    //this._initForgroundTracking()
+    //configure background tracking
+    function logError (msg) {
+      console.log(`[ERROR] getLocations: ${msg}`);
+    }
+    function handleHistoricLocations (locations) {
+      let region = {};
+      const now = Date.now();
+      const latitudeDelta = 0.01;
+      const longitudeDelta = 0.01;
+      const sameDayDiffInMillis = 24 * 3600 * 1000;
+      const currentLocations = this.state.locations.slice(0);
+      let locationsCount = currentLocations.length;
+
+      locations.forEach((location, idx) => {
+        if ((now - location.time) <= sameDayDiffInMillis) {
+          region = Object.assign({}, location, { latitudeDelta, longitudeDelta });
+          const histLocation = Object.assign({}, location, { key: locationsCount++ });
+          console.log('[DEBUG] historic location', JSON.stringify(histLocation));
+          currentLocations.push(histLocation);
+        }
+      });
+      if (currentLocations.length > 0) {
+        this.setState({ locations: currentLocations, region });
+      }
+    }
+
+    BackgroundGeolocation.getLocations(handleHistoricLocations.bind(this), logError);
+    BackgroundGeolocation.configure({
+      desiredAccuracy: 10,
+      stationaryRadius: 50,
+      distanceFilter: 50,
+      debug: true,
+      locationProvider: BackgroundGeolocation.provider.ANDROID_DISTANCE_FILTER_PROVIDER,
+      interval: 30000,
+      fastestInterval: 5000,
+      stopOnStillActivity: false,
+      stopOnTerminate: false,
+      url: 'http://localhost:8080/locations',
+      syncThreshold: 50,
+      maxLocations: 200,
+      httpHeaders: {
+        'X-FOO': 'bar'
+      }
+    });
+    BackgroundGeolocation.on('location',this._handleLocationUpdates.bind(this))
+    this.toggleTracking()
+  }
+
+
   /**
   * Puts the current position in state
   * and checks whether the map region
@@ -153,30 +201,30 @@ export default class Map extends Component {
   * or the user diactivated and reactivated
   * in another location
   */
-  _updateForgroundCurrentPosition = (pos) =>{
-
-    let updatable = {
-      gotGps:{$set:true},
-      position:{$set:pos}
-    }
-    if(!this.state.gotGps)
-    //it's the first time we have the gps we must update the map region
-      Object.assign(updatable,{region:{$set:{
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }}})
-
-    //TODO: update the region:
-    // get all corners of the maps
-    // test distance with each corner with some margin
-    // update if distance exceeds longitudeDelta and / or latitudeDelta
-    // http://stackoverflow.com/questions/36685372/how-to-zoom-in-out-in-react-native-map
-    // comparing longitude and latitudes http://stackoverflow.com/questions/15965166/what-is-the-maximum-length-of-latitude-and-longitude
-
-    this.setState((previousState)=>update(previousState,updatable))
-  }
+  // _updateForgroundCurrentPosition = (pos) =>{
+  //
+  //   let updatable = {
+  //     gotGps:{$set:true},
+  //     position:{$set:pos}
+  //   }
+  //   if(!this.state.gotGps)
+  //   //it's the first time we have the gps we must update the map region
+  //     Object.assign(updatable,{region:{$set:{
+  //       latitude: pos.coords.latitude,
+  //       longitude: pos.coords.longitude,
+  //       latitudeDelta: 0.05,
+  //       longitudeDelta: 0.05,
+  //     }}})
+  //
+  //   //TODO: update the region:
+  //   // get all corners of the maps
+  //   // test distance with each corner with some margin
+  //   // update if distance exceeds longitudeDelta and / or latitudeDelta
+  //   // http://stackoverflow.com/questions/36685372/how-to-zoom-in-out-in-react-native-map
+  //   // comparing longitude and latitudes http://stackoverflow.com/questions/15965166/what-is-the-maximum-length-of-latitude-and-longitude
+  //
+  //   this.setState((previousState)=>update(previousState,updatable))
+  // }
   _setWantedLocation(e){
     const press = e.nativeEvent ? e.nativeEvent : e
     this.setState((previousState)=>update(previousState,{
@@ -191,33 +239,33 @@ export default class Map extends Component {
     )
   }
 
-  posToLatlng = (pos) =>{
-    return pick(pos.coords,["longitude","latitude"])
-  }
+  // posToLatlng = (pos) =>{
+  //   return pick(pos.coords,["longitude","latitude"])
+  // }
 
-  /**
-   * Start foreground tracking
-   */
-  _initForgroundTracking = () => {
-    /*
-     * Todo refactor using https://www.npmjs.com/package/react-native-mauron85-background-geolocation
-     * it runs in background and updates a certain website
-     */
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        this._updateForgroundCurrentPosition(position)
-
-    },
-      (error) => alert(JSON.stringify(error)),
-      {enableHighAccuracy: true, timeout: 20000, maximumAge: 2000}
-    )
-    this.watchID = navigator.geolocation.watchPosition(
-      (position) => {
-        this._updateForgroundCurrentPosition(position)
-      }
-    )
-  }
+  // /**
+  //  * Start foreground tracking
+  //  */
+  // _initForgroundTracking = () => {
+  //   /*
+  //    * Todo refactor using https://www.npmjs.com/package/react-native-mauron85-background-geolocation
+  //    * it runs in background and updates a certain website
+  //    */
+  //
+  //   navigator.geolocation.getCurrentPosition(
+  //     (position) => {
+  //       this._updateForgroundCurrentPosition(position)
+  //
+  //   },
+  //     (error) => alert(JSON.stringify(error)),
+  //     {enableHighAccuracy: true, timeout: 20000, maximumAge: 2000}
+  //   )
+  //   this.watchID = navigator.geolocation.watchPosition(
+  //     (position) => {
+  //       this._updateForgroundCurrentPosition(position)
+  //     }
+  //   )
+  // }
   /** Render functions **/
   renderLoading = () => {
     return (
@@ -226,7 +274,6 @@ export default class Map extends Component {
        <Text style={styles.instructions}>
          Receiving GPS information...
        </Text>
-
      </View>
    );
   }
@@ -262,6 +309,7 @@ export default class Map extends Component {
    * Render the map component
    */
   render() {
+    console.log(this.state);
     if(this.state.gotGps == false){
       return this.renderLoading()
     }
