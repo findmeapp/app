@@ -190,7 +190,9 @@ export default class Map extends Component {
       }
     });
     BackgroundGeolocation.on('location',this._handleLocationUpdates.bind(this))
-    this.toggleTracking()
+
+    this.startBackgroundTracking();
+    //this.toggleTracking()
   }
 
 
