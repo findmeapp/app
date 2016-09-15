@@ -72,13 +72,13 @@ export default class Map extends Component {
       gotGps:{$set:true},
       position:{$set:pos}
     }
-    if(!this.state.gotGps)
+    if(!this.state.isTracking)
     //it's the first time we have the gps we must update the map region
       Object.assign(updatable,{region:{$set:{
         latitude: pos.latitude,
         longitude: pos.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
+        latitudeDelta: 0.5,
+        longitudeDelta: 0.5,
       }}})
 
     //TODO: update the region:
@@ -176,12 +176,12 @@ export default class Map extends Component {
       desiredAccuracy: 10,
       stationaryRadius: 50,
       distanceFilter: 50,
-      debug: true,
+      debug: false,
       locationProvider: BackgroundGeolocation.provider.ANDROID_DISTANCE_FILTER_PROVIDER,
       interval: 30000,
       fastestInterval: 5000,
-      stopOnStillActivity: false,
-      stopOnTerminate: false,
+      stopOnStillActivity: true,
+      stopOnTerminate: true,
       url: 'http://localhost:8080/locations',
       syncThreshold: 50,
       maxLocations: 200,
@@ -229,10 +229,10 @@ export default class Map extends Component {
   // }
   _setWantedLocation(e){
     const press = e.nativeEvent ? e.nativeEvent : e
-    this.setState((previousState)=>update(previousState,{
-      marker:{$set:press.coordinate}
+    this.setState({
+        marker:press.coordinate,
+        selectedMeetupDestination:true
       })
-    )
   }
   onRegionChangeComplete(e) {
     this.setState((previousState)=>update(previousState,{

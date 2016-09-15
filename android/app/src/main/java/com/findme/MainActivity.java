@@ -1,17 +1,22 @@
 package com.findme;
 
+//RN
 import com.facebook.react.ReactActivity;
+import com.facebook.react.ReactPackage;
+import com.facebook.react.shell.MainReactPackage;
+
+//modules
 import com.oblador.vectoricons.VectorIconsPackage;
 import com.marianhello.react.BackgroundGeolocationPackage;
 import com.airbnb.android.react.maps.MapsPackage;
 import com.oblador.vectoricons.VectorIconsPackage;
-import com.facebook.react.ReactPackage;
+import com.rt2zz.reactnativecontacts.ReactNativeContacts;
 import com.airbnb.android.react.maps.MapsPackage;
-import com.facebook.react.shell.MainReactPackage;
+
+//miscs
 import java.util.Arrays;
 import java.util.List;
 
-//import com.rota.rngmaps.RNGMapsPackage; // <-- import
 
 public class MainActivity extends ReactActivity {
   //@Override
@@ -22,7 +27,8 @@ public class MainActivity extends ReactActivity {
             new BackgroundGeolocationPackage(),
             new MapsPackage(),
             new VectorIconsPackage(),
-            new MapsPackage()
+            new MapsPackage(),
+            new ReactNativeContacts()
         );
     }
 
